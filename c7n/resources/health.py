@@ -79,6 +79,23 @@ class HealthEvents(QueryResourceManager):
             query['filter'] = q
         return super(HealthEvents, self).resources(query=query)
 
+    def augment(self, resources):
+        # # paginator, faster
+        # if len(resources) > 0:
+        #     client = local_session(self.session_factory).client('health')
+        #     paginator = client.get_paginator('describe_affected_entities')
+        #     events_map = {e['arn']: e for e in resources}
+
+        #     for p in paginator.paginate(filter={'eventArns': events_map.keys()}):
+        #         for e in p['entities']:
+        #             events_map[e['eventArn']]['affectedEntities'] = e
+
+        # works but takes longer time
+        client = local_session(self.session_factory).client('health')
+        for r in resources:
+            r['affectedEntities'] = client.describe_affected_entities(filter={'eventArns':[r['arn']]})['entities']
+
+        return resources
 
 HEALTH_VALID_FILTERS = {
     'availability-zone': str,
