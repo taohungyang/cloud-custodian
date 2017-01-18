@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import itertools
 import zlib
 
 from c7n.actions import BaseAction, ModifyVpcSecurityGroupsAction
@@ -180,6 +181,13 @@ class SecurityGroupApplyPatch(BaseAction):
     """
     schema = type_schema('patch')
 
+    permissions = ('ec2:AuthorizeSecurityGroupIngress',
+                   'ec2:AuthorizeSecurityGroupEgress',
+                   'ec2:RevokeSecurityGroupIngress',
+                   'ec2:RevokeSecurityGroupEgress',
+                   'ec2:CreateTags',
+                   'ec2:DeleteTags')
+
     def validate(self):
         diff_filters = [n for n in self.manager.filters if isinstance(
             n, SecurityGroupDiffFilter)]
@@ -258,6 +266,12 @@ class SecurityGroupPatch(object):
 
 
 class SGUsage(Filter):
+
+    def get_permissions(self):
+        return list(itertools.chain(
+            [self.manager.get_resource_manager(m).get_permissions()
+             for m in
+             ['lambda', 'eni', 'launch-config', 'security-group']]))
 
     def filter_peered_refs(self, resources):
         if not resources:
@@ -412,6 +426,7 @@ class Stale(Filter):
                   - stale
     """
     schema = type_schema('stale')
+    permissions = ('ec2:DescribeStaleSecurityGroups',)
 
     def process(self, resources, events):
         client = local_session(self.manager.session_factory).client('ec2')
@@ -602,10 +617,35 @@ class SGPermission(Filter):
             found = self_reference & self.data['SelfReference']
         return found
 
+    def expand_permissions(self, permissions):
+        """Expand each list of cidr, prefix list, user id group pair
+        by port/protocol as an individual rule.
+
+        The console ux automatically expands them out as addition/removal is
+        per this expansion, the describe calls automatically group them.
+        """
+        for p in permissions:
+            np = dict(p)
+            values = {}
+            for k in (u'IpRanges',
+                      u'Ipv6Ranges',
+                      u'PrefixListIds',
+                      u'UserIdGroupPairs'):
+                values[k] = np.pop(k, ())
+                np[k] = []
+            for k, v in values.items():
+                if not v:
+                    continue
+                for e in v:
+                    ep = dict(np)
+                    ep[k] = [e]
+                    yield ep
+
     def __call__(self, resource):
         matched = []
         sg_id = resource['GroupId']
-        for perm in resource[self.ip_permissions_key]:
+
+        for perm in self.expand_permissions(resource[self.ip_permissions_key]):
             found = None
             for f in self.vfilters:
                 if f(perm):
@@ -717,6 +757,7 @@ class Delete(BaseAction):
     """
 
     schema = type_schema('delete')
+    permissions = ('ec2:DeleteSecurityGroup',)
 
     def process(self, resources):
         client = local_session(self.manager.session_factory).client('ec2')
@@ -749,6 +790,9 @@ class RemovePermissions(BaseAction):
         'remove-permissions',
         ingress={'type': 'string', 'enum': ['matched', 'all']},
         egress={'type': 'string', 'enum': ['matched', 'all']})
+
+    permissions = ('ec2:RevokeSecurityGroupIngress',
+                   'ec2:RevokeSecurityGroupEgress')
 
     def process(self, resources):
         i_perms = self.data.get('ingress', 'matched')
@@ -862,6 +906,7 @@ class InterfaceModifyVpcSecurityGroups(ModifyVpcSecurityGroupsAction):
                     groups: matched
                     isolation-group: sg-01ab23c4
     """
+    permissions = ('ec2:ModifyNetworkInterfaceAttribute',)
 
     def process(self, resources):
         client = local_session(self.manager.session_factory).client('ec2')
