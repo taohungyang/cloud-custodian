@@ -23,7 +23,7 @@ from c7n.query import QueryResourceManager
 from c7n.manager import resources
 
 from c7n import utils
-from c7n.utils import type_schema
+from c7n.utils import type_schema, local_session
 
 filters = FilterRegistry('health.actions')
 actions = ActionRegistry('health.filters')
@@ -93,7 +93,10 @@ class HealthEvents(QueryResourceManager):
         # works but takes longer time
         client = local_session(self.session_factory).client('health')
         for r in resources:
-            r['affectedEntities'] = client.describe_affected_entities(filter={'eventArns':[r['arn']]})['entities']
+            affectedEntities = client.describe_affected_entities(filter={'eventArns':[r['arn']]})['entities']
+            del affectedEntities[0]['eventArn']
+            del affectedEntities[0]['awsAccountId']
+            r['affectedEntities'] = affectedEntities
 
         return resources
 
