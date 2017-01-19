@@ -95,8 +95,10 @@ class HealthEvents(QueryResourceManager):
         for r in resources:
             affectedEntities = client.describe_affected_entities(filter={'eventArns':[r['arn']]})['entities']
             del affectedEntities[0]['eventArn']
-            del affectedEntities[0]['awsAccountId']
+            if affectedEntities[0].get('awsAccountId'):
+                del affectedEntities[0]['awsAccountId']
             r['affectedEntities'] = affectedEntities
+            r['eventDescription'] = client.describe_event_details(eventArns=[r['arn']])['successfulSet'][0]['eventDescription']
 
         return resources
 
