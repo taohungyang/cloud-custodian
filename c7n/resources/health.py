@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from c7n.actions import (
-    ActionRegistry, BaseAction
+    ActionRegistry, BaseAction, Notify
 )
 from c7n.filters import (
     FilterRegistry, AgeFilter, ValueFilter, Filter, OPERATORS
@@ -25,8 +25,8 @@ from c7n.manager import resources
 from c7n import utils
 from c7n.utils import type_schema, local_session
 
-filters = FilterRegistry('health.actions')
-actions = ActionRegistry('health.filters')
+filters = FilterRegistry('health.filters')
+actions = ActionRegistry('health.actions')
 
 
 @resources.register('health-events')
@@ -93,12 +93,14 @@ class HealthEvents(QueryResourceManager):
         # works but takes longer time
         client = local_session(self.session_factory).client('health')
         for r in resources:
-            affectedEntities = client.describe_affected_entities(filter={'eventArns':[r['arn']]})['entities']
+            affectedEntities = client.describe_affected_entities(
+                filter={'eventArns':[r['arn']]})['entities']
             del affectedEntities[0]['eventArn']
             if affectedEntities[0].get('awsAccountId'):
                 del affectedEntities[0]['awsAccountId']
             r['affectedEntities'] = affectedEntities
-            r['eventDescription'] = client.describe_event_details(eventArns=[r['arn']])['successfulSet'][0]['eventDescription']
+            r['eventDescription'] = client.describe_event_details(
+                eventArns=[r['arn']])['successfulSet'][0]['eventDescription']
 
         return resources
 
@@ -152,3 +154,81 @@ class QueryFilter(object):
         if isinstance(self.value, basestring):
             value = [self.value]
         return {'Name': self.key, 'Values': value}
+
+@actions.register('notify-affected-entities')
+class NotifyAffectedEntitiesOwner(Notify):
+    """
+    Notify the owner(s) of the affected entities. If the contact information is 
+    missing, notify the root contact instead.
+
+    Example:
+
+        policies:
+          - name: health-notify-affected-entities
+            resource: health-events
+            actions:
+              - type: notify-affected-entities
+                from: email@address
+                rootContact: 
+                  - email@address
+                transport:
+                  type: sqs
+                  queue: xyz
+
+    """
+    schema = {
+        'type': 'object',
+        'required': ['type', 'transport', 'rootContact'],
+        'properties': {
+            'type': {'enum': ['notify-affected-entities']},
+            'rootContact': {'type': 'array', 'items': {'type': 'string'}},
+            'cc': {'type': 'array', 'items': {'type': 'string'}},
+            'cc_manager': {'type': 'boolean'},
+            'from': {'type': 'string'},
+            'subject': {'type': 'string'},
+            'transport': {
+                'oneOf': [
+                    {'type': 'object',
+                     'required': ['type', 'queue'],
+                     'properties': {
+                         'queue': {'type': 'string'},
+                         'type': {'enum': ['sqs']}}},
+                    {'type': 'object',
+                     'required': ['type', 'topic'],
+                     'properties': {
+                         'topic': {'type': 'string'},
+                         'type': {'enum': ['sns']},
+                         }}]
+            }
+        }
+    }
+    # schema = {}
+
+    def process(self, resources):
+        aliases = self.manager.session_factory().client(
+            'iam').list_account_aliases().get('AccountAliases', ())
+        account_name = aliases and aliases[0] or ''
+        root_contacts = self.data.get('rootContact')
+        if not root_contacts:
+            # add log message : warning/debug
+            return
+        action = self.data.copy()
+        del action['rootContact']
+        for event in resources:
+            receivers = []
+            for e in event.get('affectedEntities'):
+                if e.get('tags') and e.get('tags').get('OwnerContact'):
+                    receivers.append(e.get('tags').get('OwnerContact'))
+                else:
+                    receivers.extend(root_contacts)
+            action['to'] = receivers
+            action['subject'] = 'Custodian notification - %s' % (event['eventTypeCode'])
+            message = {'resources': [event],
+                       'event': None,
+                       'account': account_name,
+                       'action': action,
+                       'region': self.manager.config.region,
+                       'policy': self.manager.data}
+            super(NotifyAffectedEntitiesOwner, self).send_data_message(message)
+
+
