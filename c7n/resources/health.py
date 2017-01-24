@@ -209,9 +209,6 @@ class NotifyAffectedEntitiesOwner(Notify):
             'iam').list_account_aliases().get('AccountAliases', ())
         account_name = aliases and aliases[0] or ''
         root_contacts = self.data.get('rootContact')
-        if not root_contacts:
-            # add log message : warning/debug
-            return
         action = self.data.copy()
         del action['rootContact']
         for event in resources:
