@@ -212,20 +212,19 @@ class NotifyAffectedEntitiesOwner(Notify):
         action = self.data.copy()
         del action['rootContact']
         for event in resources:
-            receivers = []
-            for e in event.get('affectedEntities'):
+            affectedEntities = list(event.get('affectedEntities'))
+            for e in affectedEntities:
+                event['affectedEntities'] = [e]
                 if e.get('tags') and e.get('tags').get('OwnerContact'):
-                    receivers.append(e.get('tags').get('OwnerContact'))
+                    action['to'] = [receivers.append(e.get('tags').get('OwnerContact'))]
+                    action['subject'] = 'Custodian notification - AWS Personal Health Dashboard'
                 else:
-                    receivers.extend(root_contacts)
-            action['to'] = receivers
-            action['subject'] = 'Custodian notification - %s' % (event['eventTypeCode'])
-            message = {'resources': [event],
-                       'event': None,
-                       'account': account_name,
-                       'action': action,
-                       'region': self.manager.config.region,
-                       'policy': self.manager.data}
-            super(NotifyAffectedEntitiesOwner, self).send_data_message(message)
-
-
+                    action['to'] = root_contacts
+                    action['subject'] = 'Custodian notification - AWS Personal Health Dashboard - No OwnerContact'
+                message = {'resources': [event],
+                           'event': None,
+                           'account': account_name,
+                           'action': action,
+                           'region': self.manager.config.region,
+                           'policy': self.manager.data}
+                super(NotifyAffectedEntitiesOwner, self).send_data_message(message)
