@@ -216,7 +216,7 @@ class NotifyAffectedEntitiesOwner(Notify):
             for e in affectedEntities:
                 event['affectedEntities'] = [e]
                 if e.get('tags') and e.get('tags').get('OwnerContact'):
-                    action['to'] = [receivers.append(e.get('tags').get('OwnerContact'))]
+                    action['to'] = [e.get('tags').get('OwnerContact')]
                     action['subject'] = 'Custodian notification - AWS Personal Health Dashboard'
                 else:
                     action['to'] = root_contacts
@@ -227,4 +227,5 @@ class NotifyAffectedEntitiesOwner(Notify):
                            'action': action,
                            'region': self.manager.config.region,
                            'policy': self.manager.data}
+                print message
                 super(NotifyAffectedEntitiesOwner, self).send_data_message(message)
