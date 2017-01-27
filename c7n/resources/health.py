@@ -227,5 +227,4 @@ class NotifyAffectedEntitiesOwner(Notify):
                            'action': action,
                            'region': self.manager.config.region,
                            'policy': self.manager.data}
-                print message
                 super(NotifyAffectedEntitiesOwner, self).send_data_message(message)
