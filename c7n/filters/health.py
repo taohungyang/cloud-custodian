@@ -46,7 +46,7 @@ class HealthEventFilter(Filter):
              'eventStatusCodes': self.data.get(
                  'statuses', ['open', 'upcoming'])}
 
-        if self.data.get('eventTypeCodes'):
+        if self.data.get('types'):
             f['eventTypeCodes'] = self.data.get('types')
 
         resource_map = {r[m.id]: r for r in resources}
