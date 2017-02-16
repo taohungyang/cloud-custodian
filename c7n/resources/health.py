@@ -100,7 +100,7 @@ HEALTH_VALID_FILTERS = {
     'regions': str,
     'services': str,
     'eventStatusCodes': {'open', 'closed', 'upcoming'},
-    'types': str
+    'eventTypeCodes': str
 }
 
 
