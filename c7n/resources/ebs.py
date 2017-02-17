@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import itertools
+import json
 
 from botocore.exceptions import ClientError
 from concurrent.futures import as_completed
@@ -25,7 +27,7 @@ from c7n.manager import resources
 from c7n.resources.kms import ResourceKmsKeyAlias
 from c7n.query import QueryResourceManager
 from c7n.utils import (
-    local_session, set_annotation, chunks, type_schema, worker)
+    local_session, set_annotation, chunks, type_schema, worker, camelResource)
 from c7n.resources.ami import AMI
 
 log = logging.getLogger('custodian.ebs')
@@ -444,6 +446,83 @@ class FaultTolerantSnapshots(Filter):
         if self.data.get('tolerant', True):
             return [r for r in resources if r['VolumeId'] not in flagged]
         return [r for r in resources if r['VolumeId'] in flagged]
+
+
+@filters.register('health-event')
+class HealthEventFilter(Filter):
+    """Check if there are health events related to the resources
+
+
+
+    Health events are stored as annotation on a resource.
+    """
+    schema = type_schema(
+        'health-event',
+        types={'type': 'array', 'items': {'type': 'string'}},
+        statuses={'type': 'array', 'items': {
+            'type': 'string',
+            'enum': ['open', '']
+        }})
+
+    permissions = ('health:DescribeEvents', 'health:DescribeAffectedEntities',
+                   'health:DescribeEventDetails')
+
+    def validate(self):
+        if self.data.get('types'):
+            s = self.manager.data['resource'].upper()
+            for t in self.data.get('types'):
+                if s not in t:
+                    raise ValueError("%s is in valid for %s" % (t,s))
+        return self
+
+    def process(self, resources, event=None):
+        if not resources:
+            return resources
+
+        client = local_session(self.manager.session_factory).client('health')
+        paginator = client.get_paginator('describe_events')
+        m = self.manager
+        result_map = {}
+
+        f = {'services': [m.data['resource'].upper()],
+             'eventStatusCodes': self.data.get(
+                 'statuses', ['open', 'upcoming'])}
+
+        if self.data.get('types'):
+            f['eventTypeCodes'] = self.data.get('types')
+
+        events = list(itertools.chain(
+            *[p['events']for p in paginator.paginate(filter=f)]))
+
+        for event_set in chunks(events, 10):
+            event_map = {e['arn']: e for e in event_set}
+            for d in client.describe_event_details(
+                    eventArns=event_map.keys()).get('successfulSet', ()):
+                event_map[d['event']['arn']]['Description'] = d[
+                    'eventDescription']['latestDescription']
+            entities = client.describe_affected_entities(
+                filter={'eventArns': event_map.keys()})['entities']
+
+            for e in entities:
+                rid = e['entityValue']
+                if not result_map.get(rid):
+                    result_map[rid] = self.load_resource(rid)
+
+                result_map[rid].setdefault(
+                    'c7n:HealthEvent', []).append(event_map[e['eventArn']])
+        return result_map.values()
+
+    def load_resource(self, rid):
+        config = local_session(self.manager.session_factory).client('config')
+        paginator = config.get_paginator('get_resource_config_history')
+        for p in paginator.paginate(
+            resourceType='AWS::EC2::Volume',resourceId=rid):
+            for item in p['configurationItems']:
+                print rid
+                print item['configurationItemCaptureTime']
+                if item['configuration'] != u'null':
+                    return camelResource(json.loads(item['configuration']))
+        return {"VolumeId":rid}
 
 
 @actions.register('copy-instance-tags')
