@@ -22,6 +22,7 @@ from c7n.actions import ActionRegistry, BaseAction
 from c7n.filters import (
     CrossAccountAccessFilter, Filter, FilterRegistry, AgeFilter, ValueFilter,
     ANNOTATION_KEY, FilterValidationError, OPERATORS)
+from c7n.filters.health import HealthEventFilter
 
 from c7n.manager import resources
 from c7n.resources.kms import ResourceKmsKeyAlias
@@ -449,31 +450,7 @@ class FaultTolerantSnapshots(Filter):
 
 
 @filters.register('health-event')
-class HealthEventFilter(Filter):
-    """Check if there are health events related to the resources
-
-
-
-    Health events are stored as annotation on a resource.
-    """
-    schema = type_schema(
-        'health-event',
-        types={'type': 'array', 'items': {'type': 'string'}},
-        statuses={'type': 'array', 'items': {
-            'type': 'string',
-            'enum': ['open', 'upcoming', 'closed']
-        }})
-
-    permissions = ('health:DescribeEvents', 'health:DescribeAffectedEntities',
-                   'health:DescribeEventDetails')
-
-    def validate(self):
-        if self.data.get('types'):
-            s = self.manager.data['resource'].upper()
-            for t in self.data.get('types'):
-                if s not in t:
-                    raise ValueError("%s is in valid for %s" % (t,s))
-        return self
+class HealthFilter(HealthEventFilter):
 
     def process(self, resources, event=None):
         if not resources:
