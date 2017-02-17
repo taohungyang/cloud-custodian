@@ -518,8 +518,6 @@ class HealthEventFilter(Filter):
         for p in paginator.paginate(
             resourceType='AWS::EC2::Volume',resourceId=rid):
             for item in p['configurationItems']:
-                print rid
-                print item['configurationItemCaptureTime']
                 if item['configuration'] != u'null':
                     return camelResource(json.loads(item['configuration']))
         return {"VolumeId":rid}

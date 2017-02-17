@@ -280,3 +280,17 @@ class PiopsMetricsFilterTest(BaseTest):
             }, session_factory=session)
         resources = policy.run()
         self.assertEqual(len(resources),1)
+
+class HealthEventsFilterTest(BaseTest):
+    def test_ebs_health_events_filter(self):
+        session_factory = self.replay_flight_data(
+            'test_ebs_health_events_filter')
+        policy = self.load_policy({
+            'name': 'ebs-health-events-filter',
+            'resource': 'ebs',
+            'filters': [
+                {'type': 'health-event'}
+            ]},
+            session_factory=session_factory)
+        resources = policy.run()
+        self.assertEqual(len(resources), 0)
