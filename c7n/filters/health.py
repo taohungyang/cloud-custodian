@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from c7n.utils import local_session, chunks, type_schema
-from .core import Filter
+from .core import Filter, FilterValidationError
 
 
 class HealthEventFilter(Filter):
@@ -34,14 +34,6 @@ class HealthEventFilter(Filter):
 
     permissions = ('health:DescribeEvents', 'health:DescribeAffectedEntities',
                    'health:DescribeEventDetails')
-
-    def validate(self):
-        if self.data.get('types'):
-            s = self.manager.data['resource'].upper()
-            for t in self.data.get('types'):
-                if s not in t:
-                    raise ValueError("%s is in valid for %s" % (t,s))
-        return self
 
     def process(self, resources, event=None):
         if not resources:
