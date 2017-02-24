@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import itertools
 
 from c7n.utils import local_session, chunks, type_schema
-from .core import Filter, FilterValidationError
+from .core import Filter
 
 
 class HealthEventFilter(Filter):
@@ -29,7 +30,7 @@ class HealthEventFilter(Filter):
         types={'type': 'array', 'items': {'type': 'string'}},
         statuses={'type': 'array', 'items': {
             'type': 'string',
-            'enum': ['open', 'upcoming','closed']
+            'enum': ['open', 'upcoming', 'closed']
         }})
 
     permissions = ('health:DescribeEvents', 'health:DescribeAffectedEntities',
@@ -64,8 +65,10 @@ class HealthEventFilter(Filter):
                         eventArns=event_map.keys()).get('successfulSet', ()):
                     event_map[d['event']['arn']]['Description'] = d[
                         'eventDescription']['latestDescription']
-                entities = client.describe_affected_entities(
-                    filter={'eventArns': event_map.keys()})['entities']
+                paginator = client.get_paginator('describe_affected_entities')
+                entities = list(itertools.chain(
+                    *[p['entities']for p in paginator.paginate(
+                        filter={'eventArns': event_map.keys()})]))
 
                 for e in entities:
                     rid = e['entityValue']
