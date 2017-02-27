@@ -452,52 +452,53 @@ class FaultTolerantSnapshots(Filter):
 @filters.register('health-event')
 class HealthFilter(HealthEventFilter):
 
+    schema = type_schema(
+        'health-event',
+        types={'type': 'array', 'items': {
+            'type': 'string',
+            'enum': ['AWS_EBS_DEGRADED_EBS_VOLUME_PERFORMANCE',
+                    'AWS_EBS_VOLUME_LOST']}},
+        statuses={'type': 'array', 'items': {
+            'type': 'string',
+            'enum': ['open', 'upcoming', 'closed']
+        }})
+
+
     def process(self, resources, event=None):
+        if 'AWS_EBS_VOLUME_LOST' not in self.data['types']:
+            return super(HealthFilter, self).process(resources, event)
         if not resources:
             return resources
 
         client = local_session(self.manager.session_factory).client('health')
+        f = self.get_filter()
+        resource_map = {}
+
         paginator = client.get_paginator('describe_events')
-        m = self.manager
-        result_map = {}
-
-        f = {'services': [m.data['resource'].upper()],
-             'eventStatusCodes': self.data.get(
-                 'statuses', ['open', 'upcoming'])}
-
-        if self.data.get('types'):
-            f['eventTypeCodes'] = self.data.get('types')
-
         events = list(itertools.chain(
             *[p['events']for p in paginator.paginate(filter=f)]))
+        entities = []
+        self.process_event(events, entities)
 
-        for event_set in chunks(events, 10):
-            event_map = {e['arn']: e for e in event_set}
-            for d in client.describe_event_details(
-                    eventArns=event_map.keys()).get('successfulSet', ()):
-                event_map[d['event']['arn']]['Description'] = d[
-                    'eventDescription']['latestDescription']
-            entities = client.describe_affected_entities(
-                filter={'eventArns': event_map.keys()})['entities']
-
-            for e in entities:
-                rid = e['entityValue']
-                if not result_map.get(rid):
-                    result_map[rid] = self.load_resource(rid)
-
-                result_map[rid].setdefault(
-                    'c7n:HealthEvent', []).append(event_map[e['eventArn']])
-        return result_map.values()
+        event_map = {e['arn']: e for e in events}
+        for e in entities:
+            rid = e['entityValue']
+            if not resource_map.get(rid):
+                resource_map[rid] = self.load_resource(rid)
+            resource_map[rid].setdefault(
+                'c7n:HealthEvent', []).append(event_map[e['eventArn']])
+        return resource_map.values()
 
     def load_resource(self, rid):
         config = local_session(self.manager.session_factory).client('config')
-        paginator = config.get_paginator('get_resource_config_history')
-        for p in paginator.paginate(
-            resourceType='AWS::EC2::Volume',resourceId=rid):
-            for item in p['configurationItems']:
-                if item['configuration'] != u'null':
-                    return camelResource(json.loads(item['configuration']))
-        return {"VolumeId":rid}
+        resources_histories = config.get_resource_config_history(
+            resourceType='AWS::EC2::Volume',
+            resourceId=rid,
+            limit=2)['configurationItems']
+        for r in resources_histories:
+            if r['configurationItemStatus'] != u'ResourceDeleted':
+                return camelResource(json.loads(r['configuration']))
+        return {"VolumeId": rid}
 
 
 @actions.register('copy-instance-tags')
