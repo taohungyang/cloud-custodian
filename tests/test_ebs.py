@@ -288,9 +288,9 @@ class HealthEventsFilterTest(BaseTest):
         policy = self.load_policy({
             'name': 'ebs-health-events-filter',
             'resource': 'ebs',
-            'filters': [
-                {'type': 'health-event'}
-            ]},
-            session_factory=session_factory)
+            'filters': [{
+                'type': 'health-event',
+                'types': 'AWS_EBS_VOLUME_LOST'}]
+                },session_factory=session_factory)
         resources = policy.run()
         self.assertEqual(len(resources), 0)

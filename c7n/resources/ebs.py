@@ -457,12 +457,11 @@ class HealthFilter(HealthEventFilter):
         types={'type': 'array', 'items': {
             'type': 'string',
             'enum': ['AWS_EBS_DEGRADED_EBS_VOLUME_PERFORMANCE',
-                    'AWS_EBS_VOLUME_LOST']}},
+                     'AWS_EBS_VOLUME_LOST']}},
         statuses={'type': 'array', 'items': {
             'type': 'string',
             'enum': ['open', 'upcoming', 'closed']
         }})
-
 
     def process(self, resources, event=None):
         if 'AWS_EBS_VOLUME_LOST' not in self.data['types']:

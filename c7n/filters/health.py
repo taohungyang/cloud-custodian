@@ -68,7 +68,7 @@ class HealthEventFilter(Filter):
         m = self.manager
         if m.data['resource'] == 'ebs':
             service = 'EBS'
-        else :
+        else:
             service = m.get_model().service.upper()
         f = {'services': [service],
              'eventStatusCodes': self.data.get(
