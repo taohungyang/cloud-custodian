@@ -4,15 +4,37 @@
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "bfe9cd2d-ada6-4035-94f1-e4cf648dfc36", 
+            "RequestId": "4bf44533-0478-43b0-8811-957839f41383", 
             "HTTPHeaders": {
                 "transfer-encoding": "chunked", 
                 "vary": "Accept-Encoding", 
                 "server": "AmazonEC2", 
                 "content-type": "text/xml;charset=UTF-8", 
-                "date": "Fri, 17 Feb 2017 23:17:38 GMT"
+                "date": "Tue, 28 Feb 2017 15:09:10 GMT"
             }
         }, 
-        "Volumes": []
+        "Volumes": [
+            {
+                "AvailabilityZone": "us-east-1a", 
+                "Attachments": [], 
+                "Encrypted": false, 
+                "VolumeType": "gp2", 
+                "VolumeId": "vol-024c4240f0d1be6dc", 
+                "State": "available", 
+                "Iops": 100, 
+                "SnapshotId": "snap-5d72a050", 
+                "CreateTime": {
+                    "hour": 5, 
+                    "__class__": "datetime", 
+                    "month": 2, 
+                    "second": 50, 
+                    "microsecond": 93000, 
+                    "year": 2017, 
+                    "day": 28, 
+                    "minute": 26
+                }, 
+                "Size": 8
+            }
+        ]
     }
 }
