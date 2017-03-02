@@ -281,6 +281,7 @@ class PiopsMetricsFilterTest(BaseTest):
         resources = policy.run()
         self.assertEqual(len(resources),1)
 
+
 class HealthEventsFilterTest(BaseTest):
     def test_ebs_health_events_filter(self):
         session_factory = self.replay_flight_data(
@@ -291,6 +292,9 @@ class HealthEventsFilterTest(BaseTest):
             'filters': [{
                 'type': 'health-event',
                 'types': ['AWS_EBS_VOLUME_LOST']}]
-                },session_factory=session_factory)
+                }, session_factory=session_factory)
         resources = policy.run()
-        self.assertEqual(len(resources), 0)
+        self.assertEqual(len(resources), 1)
+        for r in resources:
+            self.assertTrue(('c7n:HealthEvent' in r) and
+                            ('Description' in e for e in r['c7n:HealthEvent']))

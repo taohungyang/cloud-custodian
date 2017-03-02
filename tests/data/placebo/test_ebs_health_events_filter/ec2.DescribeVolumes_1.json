@@ -2,36 +2,46 @@
     "status_code": 200, 
     "data": {
         "ResponseMetadata": {
-            "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "4bf44533-0478-43b0-8811-957839f41383", 
-            "HTTPHeaders": {
-                "transfer-encoding": "chunked", 
-                "vary": "Accept-Encoding", 
-                "server": "AmazonEC2", 
-                "content-type": "text/xml;charset=UTF-8", 
-                "date": "Tue, 28 Feb 2017 15:09:10 GMT"
-            }
+            "RequestId": "37d42735-bd60-460c-b3f5-c86fa29197a5"
         }, 
         "Volumes": [
             {
                 "AvailabilityZone": "us-east-1a", 
-                "Attachments": [], 
+                "Attachments": [
+                    {
+                        "AttachTime": {
+                            "hour": 5, 
+                            "__class__": "datetime", 
+                            "month": 3, 
+                            "second": 29, 
+                            "microsecond": 0, 
+                            "year": 2017, 
+                            "day": 1, 
+                            "minute": 17
+                        }, 
+                        "InstanceId": "i-1aebf7c0", 
+                        "VolumeId": "vol-2b047792", 
+                        "State": "attached", 
+                        "DeleteOnTermination": true, 
+                        "Device": "/dev/xvda"
+                    }
+                ], 
                 "Encrypted": false, 
                 "VolumeType": "gp2", 
-                "VolumeId": "vol-024c4240f0d1be6dc", 
-                "State": "available", 
-                "Iops": 100, 
-                "SnapshotId": "snap-5d72a050", 
+                "VolumeId": "vol-2b047792", 
+                "State": "in-use", 
+                "Iops": 24, 
+                "SnapshotId": "snap-eef4cdae", 
                 "CreateTime": {
                     "hour": 5, 
                     "__class__": "datetime", 
-                    "month": 2, 
-                    "second": 50, 
-                    "microsecond": 93000, 
+                    "month": 3, 
+                    "second": 29, 
+                    "microsecond": 813000, 
                     "year": 2017, 
-                    "day": 28, 
-                    "minute": 26
+                    "day": 1, 
+                    "minute": 17
                 }, 
                 "Size": 8
             }
