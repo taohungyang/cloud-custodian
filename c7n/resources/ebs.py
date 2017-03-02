@@ -463,6 +463,9 @@ class HealthFilter(HealthEventFilter):
             'enum': ['open', 'upcoming', 'closed']
         }})
 
+    permissions = HealthEventFilter.permissions + (
+        'config:GetResourceConfigHistory',)
+
     def process(self, resources, event=None):
         if 'AWS_EBS_VOLUME_LOST' not in self.data['types']:
             return super(HealthFilter, self).process(resources, event)
