@@ -40,7 +40,11 @@ class HealthEventFilter(Filter):
         if not resources:
             return resources
 
-        client = local_session(self.manager.session_factory).client('health')
+        if self.manager.config.region == 'us-east-1':
+            session = local_session(self.manager.session_factory)
+        else:
+            session = self.manager.session_factory(region='us-east-1')
+        client = session.client('health')
         f = self.get_filter()
         resource_map = {r[self.manager.get_model().id]: r for r in resources}
         found = set()
