@@ -474,14 +474,13 @@ class HealthFilter(HealthEventFilter):
 
         client = local_session(self.manager.session_factory).client(
             'health', region_name='us-east-1')
-        f = self.get_filter()
+        f = self.get_filter_parameters()
         resource_map = {}
 
         paginator = client.get_paginator('describe_events')
         events = list(itertools.chain(
             *[p['events']for p in paginator.paginate(filter=f)]))
-        entities = []
-        self.process_event(events, entities)
+        entities = self.process_event(events)
 
         event_map = {e['arn']: e for e in events}
         for e in entities:
