@@ -472,7 +472,8 @@ class HealthFilter(HealthEventFilter):
         if not resources:
             return resources
 
-        client = local_session(self.manager.session_factory).client('health')
+        client = local_session(self.manager.session_factory).client(
+            'health', region_name='us-east-1')
         f = self.get_filter()
         resource_map = {}
 

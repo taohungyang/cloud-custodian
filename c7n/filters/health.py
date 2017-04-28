@@ -40,11 +40,8 @@ class HealthEventFilter(Filter):
         if not resources:
             return resources
 
-        if self.manager.config.region == 'us-east-1':
-            session = local_session(self.manager.session_factory)
-        else:
-            session = self.manager.session_factory(region='us-east-1')
-        client = session.client('health')
+        client = local_session(self.manager.session_factory).client(
+            'health', region_name='us-east-1')
         f = self.get_filter()
         resource_map = {r[self.manager.get_model().id]: r for r in resources}
         found = set()
@@ -82,7 +79,8 @@ class HealthEventFilter(Filter):
         return f
 
     def process_event(self, health_events, entities):
-        client = local_session(self.manager.session_factory).client('health')
+        client = local_session(self.manager.session_factory).client(
+            'health', region_name='us-east-1')
         for event_set in chunks(health_events, 10):
             event_map = {e['arn']: e for e in event_set}
             for d in client.describe_event_details(
