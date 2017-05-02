@@ -1,15 +1,54 @@
 {
     "status_code": 200, 
     "data": {
-        "events": [], 
+        "events": [
+            {
+                "lastUpdatedTime": {
+                    "hour": 0, 
+                    "__class__": "datetime", 
+                    "month": 4, 
+                    "second": 4, 
+                    "microsecond": 143000, 
+                    "year": 2017, 
+                    "day": 27, 
+                    "minute": 59
+                }, 
+                "service": "EC2", 
+                "eventTypeCode": "AWS_EC2_PERSISTENT_INSTANCE_RETIREMENT_SCHEDULED", 
+                "startTime": {
+                    "hour": 0, 
+                    "__class__": "datetime", 
+                    "month": 5, 
+                    "second": 0, 
+                    "microsecond": 0, 
+                    "year": 2017, 
+                    "day": 11, 
+                    "minute": 0
+                }, 
+                "eventTypeCategory": "scheduledChange", 
+                "endTime": {
+                    "hour": 0, 
+                    "__class__": "datetime", 
+                    "month": 5, 
+                    "second": 0, 
+                    "microsecond": 0, 
+                    "year": 2017, 
+                    "day": 11, 
+                    "minute": 0
+                }, 
+                "region": "us-west-2", 
+                "arn": "arn:aws:health:us-west-2::event/AWS_EC2_PERSISTENT_INSTANCE_RETIREMENT_SCHEDULED12345678-1234-1234-1234-123456789012", 
+                "statusCode": "upcoming"
+            }
+        ], 
         "ResponseMetadata": {
             "RetryAttempts": 0, 
             "HTTPStatusCode": 200, 
-            "RequestId": "d60fcd36-2c43-11e7-9229-832e94e8909b", 
+            "RequestId": "c87bfd4b-2f74-11e7-a362-450705400dc1", 
             "HTTPHeaders": {
-                "x-amzn-requestid": "d60fcd36-2c43-11e7-9229-832e94e8909b", 
-                "date": "Fri, 28 Apr 2017 18:52:32 GMT", 
-                "content-length": "13", 
+                "x-amzn-requestid": "c87bfd4b-2f74-11e7-a362-450705400dc1", 
+                "date": "Tue, 02 May 2017 20:20:29 GMT", 
+                "content-length": "403", 
                 "content-type": "application/x-amz-json-1.1"
             }
         }
