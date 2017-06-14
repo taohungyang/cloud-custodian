@@ -461,9 +461,9 @@ class Notify(EventAction):
             'event': event,
             'account_id': self.manager.config.account_id,
             'account': account_name,
-            'action': self.data,
-            'region': self.manager.config.region}
-        message['policy'] = self.expand_variables(message)
+            'region': self.manager.config.region,
+            'policy': self.manager.data}
+        message['action'] = self.expand_variables(message)
 
         for batch in utils.chunks(resources, self.batch_size):
             message['resources'] = batch
