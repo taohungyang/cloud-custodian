@@ -1524,7 +1524,6 @@ class ParameterFilter(ValueFilter):
     """
 
     schema = type_schema('db-parameter', rinherit=ValueFilter.schema)
-    schema = type_schema('db-parameter', rinherit=ValueFilter.schema)
     permissions = ('rds:DescribeDBInstances', 'rds:DescribeDBParameters', )
 
     @staticmethod
