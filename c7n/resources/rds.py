@@ -1532,20 +1532,23 @@ class ParameterFilter(ValueFilter):
             and treat nulls sensibly.
         """
         ret_val = val
-        try:
-            if datatype == 'string':
-                ret_val = str(val)
-            elif datatype == 'boolean':
-                # AWS returns 1s and 0s for this
+        if datatype == 'string':
+            ret_val = str(val)
+        elif datatype == 'boolean':
+            # AWS returns 1s and 0s for boolean for most of the cases
+            if val.isdigit():
                 ret_val = bool(int(val))
-            elif datatype == 'integer':
-                if val.isdigit():
-                    ret_val = int(val)
-            elif datatype == 'float':
-                ret_val = float(val) if val else 0.0
-        except:
-            log.warning(
-                'recast failed type: %s  value: %s', datatype, val)
+            # AWS returns 'TRUE,FALSE' for Oracle engine
+            elif val == 'TRUE':
+                ret_val = True
+            elif val == 'FALSE':
+                ret_val = False
+        elif datatype == 'integer':
+            if val.isdigit():
+                ret_val = int(val)
+        elif datatype == 'float':
+            ret_val = float(val) if val else 0.0
+
         return ret_val
 
     def process(self, resources, event=None):

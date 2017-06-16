@@ -915,9 +915,6 @@ class TestRDSParameterGroupFilter(BaseTest):
         ({'key': 'full_page_writes', 'op': 'eq', 'value': True},
          lambda r: len(r) == 1,
          "full_page_writes ( a boolean ) should be on"),
-        ({'key': 'port', 'op': 'eq', 'value': 80},
-         lambda r: len(r) == 0,
-         "instance with port == 80 should be 0"),
     ]
 
     def test_param_value_cases(self):
