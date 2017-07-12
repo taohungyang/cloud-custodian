@@ -403,7 +403,8 @@ class ServiceLimit(Filter):
     check_limit = ('region', 'service', 'check', 'limit', 'extant', 'color')
 
     def process(self, resources, event=None):
-        client = local_session(self.manager.session_factory).client('support')
+        client = local_session(self.manager.session_factory).client(
+            'support', region_name='us-east-1')
         checks = client.describe_trusted_advisor_check_result(
             checkId=self.check_id, language='en')['result']
 
@@ -488,7 +489,7 @@ class RequestLimitIncrease(BaseAction):
 
     def process(self, resources):
         session = local_session(self.manager.session_factory)
-        client = session.client('support')
+        client = session.client('support', region_name='us-east-1')
 
         services_done = set()
         for resource in resources[0].get('c7n:ServiceLimitsExceeded', []):
