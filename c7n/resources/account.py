@@ -408,7 +408,11 @@ class ServiceLimit(Filter):
         checks = client.describe_trusted_advisor_check_result(
             checkId=self.check_id, language='en')['result']
 
+        region = self.manager.config.region
+        checks['flaggedResources'] = [r for r in checks['flaggedResources']
+            if r['metadata'][0] == region]
         resources[0]['c7n:ServiceLimits'] = checks
+
         delta = timedelta(self.data.get('refresh_period', 1))
         check_date = parse_date(checks['timestamp'])
         if datetime.now(tz=tzutc()) - delta > check_date:
