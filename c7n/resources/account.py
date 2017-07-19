@@ -410,7 +410,7 @@ class ServiceLimit(Filter):
 
         region = self.manager.config.region
         checks['flaggedResources'] = [r for r in checks['flaggedResources']
-            if r['metadata'][0] == region]
+            if r['metadata'][0] == region or (r['metadata'][0] == '-' and region == 'us-east-1')]
         resources[0]['c7n:ServiceLimits'] = checks
 
         delta = timedelta(self.data.get('refresh_period', 1))
