@@ -198,8 +198,9 @@ class AccountTests(BaseTest):
         p = self.load_policy({
             'name': 'service-limit',
             'resource': 'account',
+            'region': 'us-east-1',
             'filters': [{
-                'type': 'service-limit', 'services': ['EC2'], 'threshold': 0
+                'type': 'service-limit', 'services': ['IAM'], 'threshold': 1.0
             }]},
             session_factory=session_factory)
         resources = p.run()
@@ -207,8 +208,8 @@ class AccountTests(BaseTest):
         self.assertEqual(
             set([l['service'] for l
                  in resources[0]['c7n:ServiceLimitsExceeded']]),
-            set(['EC2']))
-        self.assertEqual(len(resources[0]['c7n:ServiceLimitsExceeded']), 1)
+            set(['IAM']))
+        self.assertEqual(len(resources[0]['c7n:ServiceLimitsExceeded']), 2)
 
     def test_service_limit_global_service(self):
         policy = {
