@@ -23,7 +23,7 @@ from dateutil.parser import parse as parse_date
 from dateutil.tz import tzutc
 
 from c7n.actions import ActionRegistry, BaseAction
-from c7n.filters import Filter, FilterRegistry, ValueFilter
+from c7n.filters import Filter, FilterRegistry, ValueFilter, FilterValidationError
 from c7n.manager import ResourceManager, resources
 from c7n.utils import local_session, type_schema
 
@@ -401,6 +401,16 @@ class ServiceLimit(Filter):
     permissions = ('support:DescribeTrustedAdvisorCheckResult',)
     check_id = 'eW7HH0l7J9'
     check_limit = ('region', 'service', 'check', 'limit', 'extant', 'color')
+    global_services = set(['IAM'])
+
+    def validate(self):
+        region = self.manager.data.get('region', '')
+        if len(self.global_services.intersection(self.data.get('services', []))):
+            if region != 'us-east-1':
+                raise FilterValidationError(
+                    "Global services: %s must be targeted in us-east-1 on the policy"
+                    % ', '.join(self.global_services))
+        return self
 
     def process(self, resources, event=None):
         client = local_session(self.manager.session_factory).client(
