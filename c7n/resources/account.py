@@ -388,6 +388,7 @@ class ServiceLimit(Filter):
                       - EC2
                     threshold: 1.0
               - name: specify-region-for-global-service
+                region: us-east-1
                 resource: account
                 filters:
                   - type: service-limit
