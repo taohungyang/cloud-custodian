@@ -400,7 +400,7 @@ class Notify(EventAction):
 
     schema = {
         'type': 'object',
-        'oneOf': [
+        'anyOf': [
             {'required': ['type', 'transport', 'to']},
             {'required': ['type', 'transport', 'to_from']}],
         'properties': {
