@@ -57,7 +57,8 @@ class CrossAccountAccessFilter(Filter):
         whitelist_conditions={'type': 'array', 'items': {'type': 'string'}},
         # white list accounts
         whitelist_from=ValuesFrom.schema,
-        whitelist={'type': 'array', 'items': {'type': 'string'}})
+        whitelist={'type': 'array', 'items': {'type': 'string'}},
+        source_ip_ranges={'type': 'array', 'items': {'type': 'string'}})
 
     policy_attribute = 'Policy'
     annotation_key = 'CrossAccountViolations'
@@ -69,6 +70,7 @@ class CrossAccountAccessFilter(Filter):
             ("aws:sourcevpce", "aws:sourcevpc", "aws:userid", "aws:username")))
         self.actions = self.data.get('actions', ())
         self.accounts = self.get_accounts()
+        self.source_ip_ranges = self.data.get('source_ip_ranges', ())
         return super(CrossAccountAccessFilter, self).process(resources, event)
 
     def get_accounts(self):
@@ -88,7 +90,8 @@ class CrossAccountAccessFilter(Filter):
         if p is None:
             return False
         violations = check_cross_account(
-            p, self.accounts, self.everyone_only, self.conditions, self.actions)
+            p, self.accounts, self.everyone_only, self.conditions, self.actions,
+            self.source_ip_ranges)
         if violations:
             r[self.annotation_key] = violations
             return True
@@ -103,7 +106,7 @@ def _account(arn):
 
 
 def check_cross_account(policy_text, allowed_accounts, everyone_only,
-                        conditions, check_actions):
+                        conditions, check_actions, source_ip_ranges):
     """Find cross account access policy grant not explicitly allowed
     """
     if isinstance(policy_text, six.string_types):
@@ -214,7 +217,16 @@ def check_cross_account(policy_text, allowed_accounts, everyone_only,
                 principal_ok = True
 
         if 'IpAddress' in s['Condition']:
-            principal_ok = True
+            # import pdb
+            # pdb.set_trace()
+            if len(source_ip_ranges):
+                cidr_list = s['Condition']['IpAddress']['aws:SourceIp']
+                if isinstance(cidr_list, six.string_types):
+                    cidr_list = [cidr_list]
+                if set(source_ip_ranges) == set(cidr_list):
+                    principal_ok = True
+            else:
+                principal_ok = True
 
         # END S3 WhiteList
 
