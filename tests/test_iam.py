@@ -726,3 +726,22 @@ class CrossAccountChecker(TestCase):
             violations = check_cross_account(
                 p, set(['221800032964']), False, (), None, None)
             self.assertEqual(bool(violations), expected)
+
+    def test_source_cidrs(self):
+        policy = {
+            "Id": "Foo",
+            "Version": "2012-10-17",
+            "Statement": [
+                {"Effect": "Allow", 
+                  "Principal": "*",
+                  "Action": "s3:*", 
+                  "Condition": {
+                    "IpAddress": {
+                      "aws:SourceIp": "10.0.0.0/16", }}}]}
+
+        self.assertEqual(len(check_cross_account(
+            policy, set(['221800032964']), False, (), None, None)), 0)
+        self.assertEqual(len(check_cross_account(
+            policy, set(['221800032964']), False, (), None, ["10.0.0.0/8"])), 0)
+        self.assertEqual(len(check_cross_account(
+            policy, set(['221800032964']), False, (), None, ["10.0.0.0/24"])), 1)
