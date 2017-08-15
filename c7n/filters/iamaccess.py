@@ -32,6 +32,7 @@ References
 
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
+from ipaddress import ip_address, ip_network
 
 import fnmatch
 import json
@@ -58,7 +59,7 @@ class CrossAccountAccessFilter(Filter):
         # white list accounts
         whitelist_from=ValuesFrom.schema,
         whitelist={'type': 'array', 'items': {'type': 'string'}},
-        source_ip_ranges={'type': 'array', 'items': {'type': 'string'}})
+        source_cidrs={'type': 'array', 'items': {'type': 'string'}})
 
     policy_attribute = 'Policy'
     annotation_key = 'CrossAccountViolations'
@@ -70,7 +71,7 @@ class CrossAccountAccessFilter(Filter):
             ("aws:sourcevpce", "aws:sourcevpc", "aws:userid", "aws:username")))
         self.actions = self.data.get('actions', ())
         self.accounts = self.get_accounts()
-        self.source_ip_ranges = self.data.get('source_ip_ranges', ())
+        self.source_cidrs = self.data.get('source_cidrs')
         return super(CrossAccountAccessFilter, self).process(resources, event)
 
     def get_accounts(self):
@@ -91,7 +92,7 @@ class CrossAccountAccessFilter(Filter):
             return False
         violations = check_cross_account(
             p, self.accounts, self.everyone_only, self.conditions, self.actions,
-            self.source_ip_ranges)
+            self.target_cidrs)
         if violations:
             r[self.annotation_key] = violations
             return True
@@ -106,7 +107,7 @@ def _account(arn):
 
 
 def check_cross_account(policy_text, allowed_accounts, everyone_only,
-                        conditions, check_actions, source_ip_ranges):
+                        conditions, check_actions, target_cidrs):
     """Find cross account access policy grant not explicitly allowed
     """
     if isinstance(policy_text, six.string_types):
@@ -217,17 +218,30 @@ def check_cross_account(policy_text, allowed_accounts, everyone_only,
                 principal_ok = True
 
         if 'IpAddress' in s['Condition']:
-            # import pdb
-            # pdb.set_trace()
-            if len(source_ip_ranges):
-                cidr_list = s['Condition']['IpAddress']['aws:SourceIp']
-                if isinstance(cidr_list, six.string_types):
-                    cidr_list = [cidr_list]
-                if set(source_ip_ranges) == set(cidr_list):
-                    principal_ok = True
-            else:
-                principal_ok = True
-
+            principal_ok = True
+            existed_srcs = s['Condition']['IpAddress']['aws:SourceIp']
+            if isinstance(existed_srcs, six.string_types):
+                existed_srcs = [existed_srcs]
+            if target_cidrs and set(target_cidrs) != set(existed_srcs):
+                target_cidrs = set(target_cidrs)
+                cidr_set = set()
+                for cidr in target_cidrs:
+                    cidr_set.update(ip_network(unicode(cidr, "utf-8")))
+                for src in existed_srcs:
+                    if '/' in src:
+                        if src not in target_cidrs:
+                            principal_ok = False
+                            src_prefix = int(src.split('/')[1])
+                            for cidr in target_cidrs:
+                                cidr_prefix = int(cidr.split('/')[1])
+                                if src_prefix > cidr_prefix and ip_network(src) in ip_network(
+                                    unicode(cidr, "utf-8")).subnets(new_prefix=src_prefix):
+                                    principal_ok = True
+                    else:
+                        if ip_address(src) not in cidr_set:
+                            principal_ok = False
+                    if not principal_ok:
+                        break
         # END S3 WhiteList
 
         if 'ArnEquals' in s['Condition']:
