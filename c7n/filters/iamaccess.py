@@ -92,7 +92,7 @@ class CrossAccountAccessFilter(Filter):
             return False
         violations = check_cross_account(
             p, self.accounts, self.everyone_only, self.conditions, self.actions,
-            self.target_cidrs)
+            self.source_cidrs)
         if violations:
             r[self.annotation_key] = violations
             return True
