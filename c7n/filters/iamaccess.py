@@ -32,7 +32,6 @@ References
 
 """
 from __future__ import absolute_import, division, print_function, unicode_literals
-from ipaddress import ip_address, ip_network
 
 import fnmatch
 import json
@@ -41,7 +40,7 @@ import six
 
 from c7n.filters import Filter
 from c7n.resolver import ValuesFrom
-from c7n.utils import type_schema
+from c7n.utils import type_schema, parse_cidr
 
 
 class CrossAccountAccessFilter(Filter):
@@ -223,24 +222,14 @@ def check_cross_account(policy_text, allowed_accounts, everyone_only,
             if isinstance(existed_srcs, six.string_types):
                 existed_srcs = [existed_srcs]
             if target_cidrs and set(target_cidrs) != set(existed_srcs):
-                target_cidrs = set(target_cidrs)
-                cidr_set = set()
-                for cidr in target_cidrs:
-                    cidr_set.update(ip_network(unicode(cidr, "utf-8")))
                 for src in existed_srcs:
-                    if '/' in src:
-                        if src not in target_cidrs:
-                            principal_ok = False
-                            src_prefix = int(src.split('/')[1])
-                            for cidr in target_cidrs:
-                                cidr_prefix = int(cidr.split('/')[1])
-                                if src_prefix > cidr_prefix and ip_network(src) in ip_network(
-                                    unicode(cidr, "utf-8")).subnets(new_prefix=src_prefix):
-                                    principal_ok = True
-                    else:
-                        if ip_address(src) not in cidr_set:
-                            principal_ok = False
-                    if not principal_ok:
+                    valid_src = False
+                    for cidr in target_cidrs:
+                        if parse_cidr(cidr).__contains__(parse_cidr(src)):
+                            valid_src = True
+                            break
+                    if not valid_src:
+                        principal_ok = False
                         break
         # END S3 WhiteList
 
