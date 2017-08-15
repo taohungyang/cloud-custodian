@@ -716,7 +716,7 @@ class CrossAccountChecker(TestCase):
                  'NotPrincipal': '90120'}]}
         self.assertTrue(
             bool(check_cross_account(
-                policy, set(['221800032964']), False, (), None)))
+                policy, set(['221800032964']), False, (), None, None)))
 
     def test_sqs_policies(self):
         policies = load_data('iam/sqs-policies.json')
@@ -724,5 +724,5 @@ class CrossAccountChecker(TestCase):
                 policies, [False, True, True, False,
                            False, False, False, False]):
             violations = check_cross_account(
-                p, set(['221800032964']), False, (), None)
+                p, set(['221800032964']), False, (), None, None)
             self.assertEqual(bool(violations), expected)
