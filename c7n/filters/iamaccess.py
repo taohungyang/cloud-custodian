@@ -222,10 +222,12 @@ def check_cross_account(policy_text, allowed_accounts, everyone_only,
             if isinstance(existed_srcs, six.string_types):
                 existed_srcs = [existed_srcs]
             if target_cidrs and set(target_cidrs) != set(existed_srcs):
+                parsed_target_cidrs = [parse_cidr(cidr) for cidr in target_cidrs]
                 for src in existed_srcs:
+                    src = parse_cidr(src)
                     valid_src = False
-                    for cidr in target_cidrs:
-                        if parse_cidr(cidr).__contains__(parse_cidr(src)):
+                    for cidr in parsed_target_cidrs:
+                        if src in cidr:
                             valid_src = True
                             break
                     if not valid_src:
