@@ -499,8 +499,8 @@ class RequestLimitIncrease(BaseAction):
 
     permissions = ('support:CreateCase',)
 
-    default_subject = 'Raise the following account limit(s) of {service}'
-    default_template = 'Please raise the account limit of {service} - {limits} by {percent}%'
+    default_subject = '[Account:{account}]Raise the following limit(s) of {service} in {region}'
+    default_template = 'Please raise the account limit of {service} - {limits}'
     default_severity = 'normal'
 
     service_code_mapping = {
@@ -515,6 +515,7 @@ class RequestLimitIncrease(BaseAction):
     def process(self, resources):
         session = local_session(self.manager.session_factory)
         client = session.client('support', region_name='us-east-1')
+        account_id = self.manager.config.account_id
 
         service_map = {}
         region_map = {}
@@ -535,7 +536,7 @@ class RequestLimitIncrease(BaseAction):
 
         for service in service_map:
             subject = self.data.get('subject', self.default_subject).format(
-                service=service, region=region_map[service])
+                service=service, region=region_map[service], account=account_id)
             service_code = self.service_code_mapping.get(service)
             body = self.data.get('message', self.default_template)
             body = body.format(**{
