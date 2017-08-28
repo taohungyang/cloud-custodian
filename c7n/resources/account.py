@@ -499,8 +499,8 @@ class RequestLimitIncrease(BaseAction):
 
     permissions = ('support:CreateCase',)
 
-    default_subject = 'Raise the following account limit(s) of {service}'
-    default_template = 'Please raise the account limit of {service} - {limits} by {percent}%'
+    default_subject = '[Account:{account}]Raise the following limit(s) of {service} in {region}'
+    default_template = 'Please raise the account limit of {service} - {limits}'
     default_severity = 'normal'
 
     service_code_mapping = {
@@ -513,47 +513,38 @@ class RequestLimitIncrease(BaseAction):
     }
 
     def process(self, resources):
-        import pdb
         session = local_session(self.manager.session_factory)
-        client = session.client('support')
+        client = session.client('support', region_name='us-east-1')
+        account_id = self.manager.config.account_id
 
         service_map = {}
+        region_map = {}
         limit_exceeded = resources[0].get('c7n:ServiceLimitsExceeded', [])
         for s in limit_exceeded:
-            if s['service'] in service_map:
-                if int(s['limit']) <= 10:
-                    increase_by = int(self.data.get('percent-increase') /10)
-                    increase_by = str(increase_by)
-                    service_map[s['service']].append('\nIncrease ' + s['check'] + ' by ' + str(increase_by) + ' in ' + s['region'] + ' \n\t Current Limit: ' + str(s['limit']) + '\n\t Current Usage: ' + str(s['extant']) + '\n\t Set New Limit to: ' + str(int(s['limit']) + increase_by))
-                else:
-                    increase_by = int(int(s['limit']) * int(self.data.get('percent-increase')) / 100)
-                    service_map[s['service']].append('\nIncrease ' + s['check'] + ' by ' + str(increase_by) + ' in ' + s['region'] + ' \n\t Current Limit: ' + str(s['limit']) + '\n\t Current Usage: ' + str(s['extant']) + '\n\t Set New Limit to: ' + str(int(s['limit']) + increase_by))
+            current_limit = int(s['limit'])
+            if current_limit <= 10:
+                increase_by = float(self.data.get('percent-increase') / 10)
             else:
-                if int(s['limit']) <= 10:
-                    increase_by = int(self.data.get('percent-increase') / 10)
-                    increase_by = str(increase_by)
-                    service_map[s['service']] = ['\nIncrease ' + s['check'] + ' by ' + str(increase_by) + ' in ' + s['region'] + ' \n\t Current Limit: ' + str(s['limit']) + '\n\t Current Usage: ' + str(s['extant']) + '\n\t Set New Limit to: ' + str(int(s['limit']) + increase_by)]
-                else:
-                    increase_by = int(int(s['limit']) * int(self.data.get('percent-increase')) / 100)
-                    service_map[s['service']] = ['\nIncrease ' + s['check'] + ' by ' + str(increase_by) + ' in ' + s['region'] + ' \n\t Current Limit: ' + str(s['limit']) + '\n\t Current Usage: ' + str(s['extant']) + '\n\t Set New Limit to: ' + str(int(s['limit']) + increase_by)]
-                    # service_map[s['service']] = ['Increase ' + s['check'] + ' by ' + increase_by + ', setting the New Limit to ' + str(int(s['limit']) + increase_by) + ' in ' + s['region']]
+                increase_by = current_limit * float(self.data.get('percent-increase')) / 100
+            increase_by = round(increase_by)
+            msg = '\nIncrease %s by %d in %s \n\t Current Limit: %s\n\t Current Usage: %s\n\t ' \
+                  'Set New Limit to: %d' % (
+                      s['check'], increase_by, s['region'], s['limit'], s['extant'],
+                      (current_limit + increase_by))
+            service_map.setdefault(s['service'], []).append(msg)
+            region_map.setdefault(s['service'], s['region'])
 
-        for f in service_map:
-            import pdb
-            service = f
-
-            subject = self.data.get('subject', self.default_subject)
-
+        for service in service_map:
+            subject = self.data.get('subject', self.default_subject).format(
+                service=service, region=region_map[service], account=account_id)
             service_code = self.service_code_mapping.get(service)
-
-            subject = subject.format(service=service)
             body = self.data.get('message', self.default_template)
             body = body.format(**{
+                'service': service,
                 'limits': '\n\t'.join(service_map[service]),
             })
             print("subject--- ",subject)
             print("body---- ",body)
-            # pdb.set_trace()
             # client.create_case(
             #     subject=subject,
             #     communicationBody=body,
