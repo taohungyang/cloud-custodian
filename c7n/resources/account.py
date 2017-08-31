@@ -465,11 +465,8 @@ class ServiceLimit(Filter):
 @actions.register('request-limit-increase')
 class RequestLimitIncrease(BaseAction):
     """ File support ticket to raise limit
-
     :Example:
-
     .. code-block: yaml
-
         policies:
           - name: account-service-limits
             resource: account
@@ -484,7 +481,7 @@ class RequestLimitIncrease(BaseAction):
                - type: request-limit-increase
                  notify: [email, email2]
                  percent-increase: 50
-                 message: "Raise {service} - {limits} by {percent}%"
+                 message: "Please raise the below account limit(s); \n {limits}"
     """
 
     schema = type_schema(
@@ -500,7 +497,7 @@ class RequestLimitIncrease(BaseAction):
     permissions = ('support:CreateCase',)
 
     default_subject = '[Account:{account}]Raise the following limit(s) of {service} in {region}'
-    default_template = 'Please raise the account limit of {service} - {limits}'
+    default_template = 'Please raise the below account limit(s); \n {limits}'
     default_severity = 'normal'
 
     service_code_mapping = {
@@ -543,15 +540,14 @@ class RequestLimitIncrease(BaseAction):
                 'service': service,
                 'limits': '\n\t'.join(service_map[service]),
             })
-            print("subject--- ",subject)
-            print("body---- ",body)
-            # client.create_case(
-            #     subject=subject,
-            #     communicationBody=body,
-            #     serviceCode=service_code,
-            #     categoryCode='general-guidance',
-            #     severityCode=self.data.get('severity', self.default_severity),
-            #     ccEmailAddresses=self.data.get('notify', []))
+            
+            client.create_case(
+                subject=subject,
+                communicationBody=body,
+                serviceCode=service_code,
+                categoryCode='general-guidance',
+                severityCode=self.data.get('severity', self.default_severity),
+                ccEmailAddresses=self.data.get('notify', []))
 
 
 def cloudtrail_policy(original, bucket_name, account_id):
