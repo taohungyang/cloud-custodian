@@ -465,8 +465,11 @@ class ServiceLimit(Filter):
 @actions.register('request-limit-increase')
 class RequestLimitIncrease(BaseAction):
     """ File support ticket to raise limit
+
     :Example:
+
     .. code-block: yaml
+
         policies:
           - name: account-service-limits
             resource: account
