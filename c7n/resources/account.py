@@ -740,3 +740,71 @@ class HasVirtualMFA(Filter):
 
     def process(self, resources, event=None):
         return list(filter(self.account_has_virtual_mfa, resources))
+
+@actions.register('balance-limit')
+class BalanceLimit(BaseAction):
+
+    schema = type_schema(
+        'balance-limit',
+        regions={'type': 'array', 'items': {'type': 'string'}},
+        notify={'type': 'array', 'items': {'type': 'string'}},
+        severity={'type': 'string', 'enum': ['urgent', 'high', 'normal', 'low']},
+        required=['regions']
+    )
+    permissions = ('support:DescribeTrustedAdvisorCheckResult',)
+    check_id = 'eW7HH0l7J9'
+    check_limit = ('region', 'service', 'check', 'limit', 'extant', 'color')
+    default_severity = 'normal'
+    service_code_mapping = {
+        'AutoScaling': 'auto-scaling',
+        'CloudFormation': 'aws-cloudformation',
+        'ELB': 'elastic-load-balancing',
+        'EBS': 'amazon-elastic-block-store',
+        'EC2': 'amazon-elastic-compute-cloud-linux',
+        'Kinesis': 'amazon-kinesis',
+        'RDS': 'amazon-relational-database-service-aurora',
+        'SES': 'amazon-simple-email-service',
+        'VPC': 'amazon-virtual-private-cloud',
+    }
+
+    def process(self, resources, event=None):
+        client = local_session(self.manager.session_factory).client(
+            'support', region_name='us-east-1')
+        checks = client.describe_trusted_advisor_check_result(
+            checkId=self.check_id, language='en')['result']
+
+        regions = set(self.data.get('regions'))
+        checks['flaggedResources'] = [r for r in checks['flaggedResources'] if r['metadata'][0] in regions]
+        resources[0]['c7n:ServiceLimits'] = checks
+
+        s_map = {}
+        for resource in checks['flaggedResources']:
+            limit = dict(zip(self.check_limit, resource['metadata']))
+            s_map.setdefault(limit['service'], {}).setdefault(limit['check'], {})[limit['region']] = limit['limit']
+
+        for s, s_detail in s_map.items():
+            increase = []
+            for sub_s, sub_s_detail in s_detail.items():
+                target_limit = max([int(i) for i in sub_s_detail.values()])
+                if len(sub_s_detail) != len(regions):
+                    inc_regions = [r for r in regions if r not in sub_s_detail]
+                else:
+                    inc_regions = [r for r in sub_s_detail if int(sub_s_detail[r]) != target_limit]
+                if len(inc_regions):
+                    increase.append('%s-%s:\n\tRegion(s):%s\n\tNew limit:%s' % (s, sub_s, ', '.join(inc_regions), target_limit))
+
+            if len(increase):
+                subject = '[Account:%s]Raise the following limit(s) of %s' % (self.manager.config.account_id, s)
+                body = 'Please raise the below account limit(s):\n%s' % '\n'.join(increase)
+                service_code = self.service_code_mapping.get(s)
+                print (subject)
+                print (body)
+                print (service_code)
+                client.create_case(
+                    subject=subject,
+                    communicationBody=body,
+                    serviceCode=service_code,
+                    categoryCode='general-guidance',
+                    severityCode=self.data.get('severity', self.default_severity),
+                    ccEmailAddresses=self.data.get('notify', []))
+
