@@ -749,6 +749,8 @@ class BalanceLimit(BaseAction):
         regions={'type': 'array', 'items': {'type': 'string'}},
         notify={'type': 'array', 'items': {'type': 'string'}},
         severity={'type': 'string', 'enum': ['urgent', 'high', 'normal', 'low']},
+        blacklist={'type': 'object'},
+        message={'type': 'string'},
         required=['regions']
     )
     permissions = ('support:DescribeTrustedAdvisorCheckResult',)
@@ -772,17 +774,21 @@ class BalanceLimit(BaseAction):
             'support', region_name='us-east-1')
         checks = client.describe_trusted_advisor_check_result(
             checkId=self.check_id, language='en')['result']
-
+        blacklist = self.data.get('blacklist')
         regions = set(self.data.get('regions'))
-        checks['flaggedResources'] = [r for r in checks['flaggedResources'] if r['metadata'][0] in regions]
-        resources[0]['c7n:ServiceLimits'] = checks
 
-        s_map = {}
+        result = {}
         for resource in checks['flaggedResources']:
+            if resource['metadata'][0] not in regions:
+                continue
+            if resource['metadata'][2] in blacklist.get(resource['metadata'][1], {}):
+                continue
             limit = dict(zip(self.check_limit, resource['metadata']))
-            s_map.setdefault(limit['service'], {}).setdefault(limit['check'], {})[limit['region']] = limit['limit']
+            result.setdefault('c7n:MissMatchedServiceLimits', {}).setdefault(
+                limit['service'], {}).setdefault(
+                limit['check'], {})[limit['region']] = limit['limit']
 
-        for s, s_detail in s_map.items():
+        for s, s_detail in result.get('c7n:MissMatchedServiceLimits', {}).items():
             increase = []
             for sub_s, sub_s_detail in s_detail.items():
                 target_limit = max([int(i) for i in sub_s_detail.values()])
@@ -795,16 +801,22 @@ class BalanceLimit(BaseAction):
 
             if len(increase):
                 subject = '[Account:%s]Raise the following limit(s) of %s' % (self.manager.config.account_id, s)
-                body = 'Please raise the below account limit(s):\n%s' % '\n'.join(increase)
+                message = self.data.get('message', 'nPlease raise the below account limit(s):')
+                body = '%s\n%s' % (message, '\n'.join(increase))
                 service_code = self.service_code_mapping.get(s)
-                print (subject)
-                print (body)
-                print (service_code)
-                client.create_case(
+                # print (subject)
+                # print (body)
+                # print (service_code)
+                # response = {'caseId': 1234}
+                response = client.create_case(
                     subject=subject,
                     communicationBody=body,
                     serviceCode=service_code,
                     categoryCode='general-guidance',
                     severityCode=self.data.get('severity', self.default_severity),
                     ccEmailAddresses=self.data.get('notify', []))
+                result.setdefault('c7n:BalanceLimitBody', {})[s] = {
+                    'caseId' : response['caseId'],
+                    'communicationBody': body}
 
+        return result
