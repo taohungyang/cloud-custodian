@@ -746,12 +746,13 @@ class BalanceLimit(BaseAction):
 
     schema = type_schema(
         'balance-limit',
-        regions={'type': 'array', 'items': {'type': 'string'}},
+        target_region={'type': 'string'} ,
+        balancing_regions={'type': 'array', 'items': {'type': 'string'}},
         notify={'type': 'array', 'items': {'type': 'string'}},
         severity={'type': 'string', 'enum': ['urgent', 'high', 'normal', 'low']},
         blacklist={'type': 'object'},
         message={'type': 'string'},
-        required=['regions']
+        required=['target_region', 'balancing_regions']
     )
     permissions = ('support:DescribeTrustedAdvisorCheckResult',)
     check_id = 'eW7HH0l7J9'
@@ -774,8 +775,13 @@ class BalanceLimit(BaseAction):
             'support', region_name='us-east-1')
         checks = client.describe_trusted_advisor_check_result(
             checkId=self.check_id, language='en')['result']
-        blacklist = self.data.get('blacklist')
-        regions = set(self.data.get('regions'))
+        blacklist = self.data.get('blacklist', {})
+        balancing_regions = self.data['balancing_regions']
+        target_region = self.data['target_region']
+        regions = []
+        regions.extend(balancing_regions)
+        regions.append(target_region)
+        regions = set(regions)
 
         result = {}
         for resource in checks['flaggedResources']:
@@ -784,18 +790,22 @@ class BalanceLimit(BaseAction):
             if resource['metadata'][2] in blacklist.get(resource['metadata'][1], {}):
                 continue
             limit = dict(zip(self.check_limit, resource['metadata']))
-            result.setdefault('c7n:MissMatchedServiceLimits', {}).setdefault(
+            result.setdefault('c7n:ServiceLimits', {}).setdefault(
                 limit['service'], {}).setdefault(
                 limit['check'], {})[limit['region']] = limit['limit']
 
-        for s, s_detail in result.get('c7n:MissMatchedServiceLimits', {}).items():
+        for s, s_detail in result.get('c7n:ServiceLimits', {}).items():
             increase = []
             for sub_s, sub_s_detail in s_detail.items():
-                target_limit = max([int(i) for i in sub_s_detail.values()])
-                if len(sub_s_detail) != len(regions):
-                    inc_regions = [r for r in regions if r not in sub_s_detail]
-                else:
-                    inc_regions = [r for r in sub_s_detail if int(sub_s_detail[r]) != target_limit]
+                target_limit = sub_s_detail.get(target_region)
+                if not target_limit:
+                    continue
+                target_limit = int(target_limit)
+                inc_regions = []
+                for r in balancing_regions:
+                    current_limit = sub_s_detail.get(r)
+                    if not current_limit or int(current_limit) < target_limit:
+                        inc_regions.append(r) 
                 if len(inc_regions):
                     increase.append('%s-%s:\n\tRegion(s):%s\n\tNew limit:%s' % (s, sub_s, ', '.join(inc_regions), target_limit))
 
