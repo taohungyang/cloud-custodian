@@ -21,8 +21,6 @@ import re
 import six
 from botocore.exceptions import ClientError
 from dateutil.parser import parse
-from datetime import datetime
-from dateutil.tz import tzutc
 from concurrent.futures import as_completed
 
 from c7n.actions import (
@@ -318,8 +316,6 @@ class InstanceImageBase(object):
         image = instance.get('c7n:instance-image', None)
         if not image:
             image = instance['c7n:instance-image'] = self.image_map.get(instance['ImageId'], None)
-            image['ImageAge'] = instance['c7n:instance-image']['ImageAge'] = (
-                datetime.now(tz=tzutc()) - parse(image['CreationDate'])).days
         return image
 
     def get_local_image_mapping(self, image_ids):
