@@ -71,8 +71,11 @@ class ResourceQuery(object):
     def filter(self, resource_manager, **params):
         """Query a set of resources."""
         m = self.resolve(resource_manager.resource_type)
-        client = local_session(self.session_factory).client(
-            m.service)
+        if m.service == 'sqs':
+            endpint = 'https://sqs.%s.amazonaws.com/' % resource_manager.config.region
+            client = local_session(self.session_factory).client(m.service, endpoint_url=endpint)
+        else:
+            client = local_session(self.session_factory).client(m.service)
         enum_op, path, extra_args = m.enum_spec
         if extra_args:
             params.update(extra_args)
