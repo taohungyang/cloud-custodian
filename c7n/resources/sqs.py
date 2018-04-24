@@ -41,8 +41,8 @@ class SQS(QueryResourceManager):
         enum_spec = ('list_queues', 'QueueUrls', None)
         detail_spec = ("get_queue_attributes", "QueueUrl", None, "Attributes")
         id = 'QueueUrl'
-        filter_name = 'QueueNamePrefix'
-        filter_type = 'scalar'
+        filter_name = None
+        filter_type = None
         name = 'QueueUrl'
         date = 'CreatedTimestamp'
         dimension = 'QueueName'
