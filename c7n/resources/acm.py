@@ -15,6 +15,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
+from c7n.filters import FilterRegistry
+from c7n.filters.health import HealthEventFilter
+
+filters = FilterRegistry('acm-certificate.filters')
+filters.register('health-event', HealthEventFilter)
 
 
 @resources.register('acm-certificate')
@@ -32,3 +37,5 @@ class Certificate(QueryResourceManager):
             'CertificateArn', 'Certificate')
         config_type = "AWS::ACM::Certificate"
         filter_name = None
+
+    filter_registry = filters
