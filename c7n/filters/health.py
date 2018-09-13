@@ -50,8 +50,6 @@ class HealthEventFilter(Filter):
         seen = set()
 
         for resource_set in chunks(resource_map.keys(), 100):
-            # import pdb
-            # pdb.set_trace()
             f['entityValues'] = resource_set
             events = client.describe_events(filter=f)['events']
             events = [e for e in events if e['arn'] not in seen]
