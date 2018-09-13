@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from c7n_azure.query import QueryResourceManager
 from c7n_azure.provider import resources
+from c7n_azure.resources.arm import ArmResourceManager
 
 
 @resources.register('publicip')
-class PublicIPAddress(QueryResourceManager):
+class PublicIPAddress(ArmResourceManager):
 
-    class resource_type(object):
+    class resource_type(ArmResourceManager.resource_type):
         service = 'azure.mgmt.network'
         client = 'NetworkManagementClient'
-        enum_spec = ('public_ip_addresses', 'list_all')
-        id = 'id'
-        name = 'name'
+        enum_spec = ('public_ip_addresses', 'list_all', None)
+        type = 'publicip'
         default_report_fields = (
             'name',
             'location',

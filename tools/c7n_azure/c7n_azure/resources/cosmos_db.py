@@ -12,19 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from c7n_azure.query import QueryResourceManager
 from c7n_azure.provider import resources
+from c7n_azure.resources.arm import ArmResourceManager
 
 
 @resources.register('cosmosdb')
-class CosmosDB(QueryResourceManager):
+class CosmosDB(ArmResourceManager):
 
-    class resource_type(object):
+    class resource_type(ArmResourceManager.resource_type):
         service = 'azure.mgmt.cosmosdb'
         client = 'CosmosDB'
-        enum_spec = ('database_accounts', 'list')
-        id = 'id'
-        name = 'name'
+        enum_spec = ('database_accounts', 'list', None)
         default_report_fields = (
             'name',
             'location',

@@ -12,21 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from c7n_azure.query import QueryResourceManager
 from c7n_azure.provider import resources
+from c7n_azure.resources.arm import ArmResourceManager
+
+from c7n.filters.core import ValueFilter, type_schema
+from c7n.filters.related import RelatedResourceFilter
 
 
 @resources.register('loadbalancer')
-class LoadBalancer(QueryResourceManager):
+class LoadBalancer(ArmResourceManager):
 
-    class resource_type(object):
+    class resource_type(ArmResourceManager.resource_type):
         service = 'azure.mgmt.network'
         client = 'NetworkManagementClient'
-        enum_spec = ('load_balancers', 'list_all')
-        id = 'id'
-        name = 'name'
-        default_report_fields = (
-            'name',
-            'location',
-            'resourceGroup'
-        )
+        enum_spec = ('load_balancers', 'list_all', None)
+        type = 'loadbalancer'
+
+
+@LoadBalancer.filter_registry.register('frontend-public-ip')
+class FrontEndIp(RelatedResourceFilter):
+    """Filters load balancers by frontend public ip.
+
+    :Example:
+
+        .. code-block:: yaml
+
+            policies:
+               - name: loadbalancer-with-ipv6-frontend
+                 resource: azure.loadbalancer
+                 filters:
+                    - type: frontend-public-ip
+                      key: properties.publicIPAddressVersion
+                      op: in
+                      value_type: normalize
+                      value: "ipv6"
+    """
+
+    schema = type_schema('frontend-public-ip', rinherit=ValueFilter.schema)
+
+    RelatedResource = "c7n_azure.resources.public_ip.PublicIPAddress"
+    RelatedIdsExpression = "properties.frontendIPConfigurations[].properties.publicIPAddress.id"

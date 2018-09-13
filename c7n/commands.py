@@ -123,6 +123,10 @@ def policy_command(f):
                     log.error("duplicate policy name '{}'".format(policy))
                     sys.exit(1)
 
+        # Variable expansion
+        for p in policies:
+            p.expand_variables(p.get_variables())
+
         return f(options, list(policies))
 
     return _load_policies
@@ -217,16 +221,6 @@ def validate(options):
             log.error("%s" % e)
     if errors:
         sys.exit(1)
-
-# This subcommand is disabled in cli.py.
-# Commmeting it out for coverage purposes.
-#
-# @policy_command
-# def access(options, policies):
-#    permissions = set()
-#    for p in policies:
-#        permissions.update(p.get_permissions())
-#    pprint.pprint(sorted(list(permissions)))
 
 
 @policy_command

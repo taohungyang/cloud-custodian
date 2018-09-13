@@ -12,20 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from c7n_azure.query import QueryResourceManager
 from c7n_azure.provider import resources
+from c7n_azure.resources.arm import ArmResourceManager
+from c7n_azure.utils import ResourceIdParser
+
 from c7n.actions import BaseAction
 from c7n.filters import Filter
 from c7n.utils import type_schema
 
+
 @resources.register('resourcegroup')
-class ResourceGroup(QueryResourceManager):
-    class resource_type(object):
+class ResourceGroup(ArmResourceManager):
+
+    class resource_type(ArmResourceManager.resource_type):
         service = 'azure.mgmt.resource'
         client = 'ResourceManagementClient'
-        enum_spec = ('resource_groups', 'list')
-        id = 'id'
-        name = 'name'
+        enum_spec = ('resource_groups', 'list', None)
+
+    def get_resources(self, resource_ids):
+        resource_client = self.get_client('azure.mgmt.resource.ResourceManagementClient')
+        data = [
+            resource_client.resource_groups.get(ResourceIdParser.get_resource_group(rid))
+            for rid in resource_ids
+        ]
+        return [r.serialize(True) for r in data]
 
 
 @ResourceGroup.filter_registry.register('empty-group')
@@ -37,7 +47,12 @@ class EmptyGroup(Filter):
     #       - type: empty-group
 
     def __call__(self, group):
-        resources_iterator = self.manager.get_client().resources.list_by_resource_group(group['name'])
+        resources_iterator = (
+            self.manager
+                .get_client()
+                .resources
+                .list_by_resource_group(group['name'])
+        )
         return not any(True for _ in resources_iterator)
 
 
@@ -53,5 +68,5 @@ class DeleteResourceGroup(BaseAction):
 
     def process(self, groups):
         for group in groups:
-            self.manager.log.info('Removing empty resource group ' + group['name'])
+            self.manager.log.info('Removing resource group ' + group['name'])
             self.manager.get_client().resource_groups.delete(group['name'])

@@ -22,9 +22,9 @@ import logging
 
 from collections import defaultdict
 from c7n.actions import ActionRegistry, BaseAction
+from c7n.exceptions import PolicyValidationError
 from c7n.filters import (
-    Filter, FilterRegistry, FilterValidationError, DefaultVpcBase,
-    MetricsFilter, ValueFilter)
+    Filter, FilterRegistry, DefaultVpcBase, MetricsFilter, ValueFilter)
 import c7n.filters.vpc as net_filters
 from c7n import tags
 from c7n.manager import resources
@@ -59,7 +59,7 @@ class AppELB(QueryResourceManager):
         id = 'LoadBalancerArn'
         filter_name = None
         filter_type = None
-        dimension = None
+        dimension = "LoadBalancer"
         date = 'CreatedTime'
         config_type = 'AWS::ElasticLoadBalancingV2::LoadBalancer'
 
@@ -253,8 +253,9 @@ class SetWaf(BaseAction):
                 break
         if not found:
             # try to ensure idempotent usage
-            raise FilterValidationError(
-                "set-waf should be used in conjunction with waf-enabled filter")
+            raise PolicyValidationError(
+                "set-waf should be used in conjunction with waf-enabled filter on %s" % (
+                    self.manager.data,))
         return self
 
     def process(self, resources):
@@ -315,9 +316,9 @@ class SetS3Logging(BaseAction):
     def validate(self):
         if self.data.get('state') == 'enabled':
             if 'bucket' not in self.data or 'prefix' not in self.data:
-                raise FilterValidationError((
+                raise PolicyValidationError((
                     "alb logging enablement requires `bucket` "
-                    "and `prefix` specification"))
+                    "and `prefix` specification on %s" % (self.manager.data,)))
         return self
 
     def process(self, resources):
@@ -614,12 +615,12 @@ class IsNotLoggingFilter(Filter, AppELBAttributeFilterBase):
         bucket_prefix = self.data.get('prefix', None)
 
         return [alb for alb in resources
-                if not alb['Attributes']['access_logs.s3.enabled'] or
-                (bucket_name and bucket_name != alb['Attributes'].get(
-                    'access_logs.s3.bucket', None)) or
-                (bucket_prefix and bucket_prefix != alb['Attributes'].get(
-                    'access_logs.s3.prefix', None))
-                ]
+                if alb['Type'] == 'application' and (
+                    not alb['Attributes']['access_logs.s3.enabled'] or (
+                        bucket_name and bucket_name != alb['Attributes'].get(
+                            'access_logs.s3.bucket', None)) or (
+                        bucket_prefix and bucket_prefix != alb['Attributes'].get(
+                            'access_logs.s3.prefix', None)))]
 
 
 class AppELBTargetGroupFilterBase(object):
@@ -677,8 +678,9 @@ class AppELBListenerFilter(ValueFilter, AppELBListenerFilterBase):
                 found = True
                 break
         if not found:
-            raise FilterValidationError(
-                "matched listener filter, requires preceding listener filter")
+            raise PolicyValidationError(
+                "matched listener filter, requires preceding listener filter on %s " % (
+                    self.manager.data,))
         return self
 
     def process(self, albs, event=None):
@@ -735,8 +737,9 @@ class AppELBModifyListenerPolicy(BaseAction):
         for f in self.manager.data.get('filters', ()):
             if 'listener' in f.get('type', ()):
                 return self
-        raise FilterValidationError(
-            "modify-listener action requires the listener filter")
+        raise PolicyValidationError(
+            "modify-listener action requires the listener filter %s" % (
+                self.manager.data,))
 
     def process(self, load_balancers):
         args = {}
