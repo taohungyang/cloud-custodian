@@ -83,15 +83,10 @@ class HealthEvents(QueryResourceManager):
                 event_map[d['event']['arn']][
                     'Description'] = d['eventDescription']['latestDescription']
 
-            event_arns = [r['arn'] for r in resource_set
-                          if r['eventTypeCategory'] != 'accountNotification']
-
-            if not event_arns:
-                continue
             paginator = client.get_paginator('describe_affected_entities')
             entities = list(itertools.chain(
                 *[p['entities']for p in paginator.paginate(
-                    filter={'eventArns': event_arns})]))
+                    filter={'eventArns': event_map.keys()})]))
 
             for e in entities:
                 event_map[e.pop('eventArn')].setdefault(

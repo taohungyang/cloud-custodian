@@ -70,7 +70,7 @@ class HealthEventFilter(Filter):
         phd_svc_name_map = {
             'app-elb': 'ELASTICLOADBALANCING',
             'ebs': 'EBS',
-            'efs': 'ELASTICFILESYSTEM'
+            'efs': 'ELASTICFILESYSTEM',
             'elb': 'ELASTICLOADBALANCING',
         }
         m = self.manager
