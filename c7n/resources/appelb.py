@@ -26,6 +26,7 @@ from c7n.exceptions import PolicyValidationError
 from c7n.filters import (
     Filter, FilterRegistry, DefaultVpcBase, MetricsFilter, ValueFilter)
 import c7n.filters.vpc as net_filters
+from c7n.filters.health import HealthEventFilter
 from c7n import tags
 from c7n.manager import resources
 
@@ -42,6 +43,7 @@ actions = ActionRegistry('app-elb.actions')
 
 filters.register('tag-count', tags.TagCountFilter)
 filters.register('marked-for-op', tags.TagActionFilter)
+filters.register('health-event', HealthEventFilter)
 
 
 @resources.register('app-elb')
@@ -56,7 +58,7 @@ class AppELB(QueryResourceManager):
 
         enum_spec = ('describe_load_balancers', 'LoadBalancers', None)
         name = 'LoadBalancerName'
-        id = 'LoadBalancerArn'
+        id = 'LoadBalancerName'
         filter_name = None
         filter_type = None
         dimension = "LoadBalancer"

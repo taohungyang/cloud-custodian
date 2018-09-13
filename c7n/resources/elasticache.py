@@ -27,6 +27,7 @@ from c7n.actions import (
     ActionRegistry, BaseAction, ModifyVpcSecurityGroupsAction)
 from c7n.filters import FilterRegistry, AgeFilter, OPERATORS
 import c7n.filters.vpc as net_filters
+from c7n.filters.health import HealthEventFilter
 from c7n.manager import resources
 from c7n.query import QueryResourceManager
 from c7n.tags import universal_augment
@@ -38,6 +39,7 @@ log = logging.getLogger('custodian.elasticache')
 
 filters = FilterRegistry('elasticache.filters')
 actions = ActionRegistry('elasticache.actions')
+filters.register('health-event', HealthEventFilter)
 
 TTYPE = re.compile('cache.t')
 

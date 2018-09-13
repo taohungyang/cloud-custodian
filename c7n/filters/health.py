@@ -50,6 +50,8 @@ class HealthEventFilter(Filter):
         seen = set()
 
         for resource_set in chunks(resource_map.keys(), 100):
+            # import pdb
+            # pdb.set_trace()
             f['entityValues'] = resource_set
             events = client.describe_events(filter=f)['events']
             events = [e for e in events if e['arn'] not in seen]
@@ -67,11 +69,14 @@ class HealthEventFilter(Filter):
         return [resource_map[resource_id] for resource_id in found]
 
     def get_filter_parameters(self):
+        phd_svc_name_map = {
+            'app-elb': 'ELASTICLOADBALANCING',
+            'ebs': 'EBS',
+            'efs': 'ELASTICFILESYSTEM'
+            'elb': 'ELASTICLOADBALANCING',
+        }
         m = self.manager
-        if m.data['resource'] == 'ebs':
-            service = 'EBS'
-        else:
-            service = m.get_model().service.upper()
+        service = phd_svc_name_map.get(m.data['resource'], m.get_model().service.upper())
         f = {'services': [service],
              'regions': [self.manager.config.region],
              'eventStatusCodes': self.data.get(

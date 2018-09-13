@@ -20,6 +20,7 @@ from concurrent.futures import as_completed
 
 from c7n.actions import BaseAction, ModifyVpcSecurityGroupsAction
 from c7n.filters import FilterRegistry
+from c7n.filters.health import HealthEventFilter
 from c7n import query
 from c7n.manager import resources
 from c7n.tags import TagDelayedAction, RemoveTag, TagActionFilter, Tag
@@ -30,6 +31,7 @@ from c7n.filters.vpc import SecurityGroupFilter, SubnetFilter
 
 filters = FilterRegistry('dynamodb-table.filters')
 filters.register('marked-for-op', TagActionFilter)
+filters.register('health-event', HealthEventFilter)
 
 
 @resources.register('dynamodb-table')

@@ -28,6 +28,7 @@ from c7n.filters import (
     Filter, FilterRegistry, DefaultVpcBase, ValueFilter,
     ShieldMetrics)
 import c7n.filters.vpc as net_filters
+from c7n.filters.health import HealthEventFilter
 from datetime import datetime
 from dateutil.tz import tzutc
 from c7n import tags
@@ -46,6 +47,7 @@ filters.register('tag-count', tags.TagCountFilter)
 filters.register('marked-for-op', tags.TagActionFilter)
 filters.register('shield-enabled', IsShieldProtected)
 filters.register('shield-metrics', ShieldMetrics)
+filters.register('health-event', HealthEventFilter)
 
 
 @resources.register('elb')
