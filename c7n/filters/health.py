@@ -76,7 +76,7 @@ class HealthEventFilter(Filter):
         m = self.manager
         service = phd_svc_name_map.get(m.data['resource'], m.get_model().service.upper())
         f = {'services': [service],
-             'regions': [self.manager.config.region],
+             'regions': [self.manager.config.region, 'global'],
              'eventStatusCodes': self.data.get(
                  'statuses', ['open', 'upcoming'])}
         if self.data.get('types'):
