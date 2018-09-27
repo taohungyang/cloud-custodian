@@ -44,7 +44,11 @@ class HealthEventFilter(Filter):
         client = local_session(self.manager.session_factory).client(
             'health', region_name='us-east-1')
         f = self.get_filter_parameters()
-        resource_map = {r[self.manager.get_model().id]: r for r in resources}
+        if self.manager.data['resource'] in {'app-elb'}:
+            id_attr = self.manager.get_model().name
+        else:
+            id_attr = self.manager.get_model().id
+        resource_map = {r[id_attr]: r for r in resources}
         found = set()
         seen = set()
 
