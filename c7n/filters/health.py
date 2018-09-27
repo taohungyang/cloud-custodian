@@ -17,6 +17,7 @@ import itertools
 
 from c7n.utils import local_session, chunks, type_schema
 from .core import Filter
+from c7n.manager import resources
 
 
 class HealthEventFilter(Filter):
@@ -51,7 +52,7 @@ class HealthEventFilter(Filter):
             f['entityValues'] = resource_set
             events = client.describe_events(filter=f)['events']
             events = [e for e in events if e['arn'] not in seen]
-            entities = self.process_event(events)
+            entities = self.process_event(client, events)
 
             event_map = {e['arn']: e for e in events}
             for e in entities:
@@ -78,10 +79,8 @@ class HealthEventFilter(Filter):
             f['eventTypeCodes'] = self.data.get('types')
         return f
 
-    def process_event(self, health_events):
+    def process_event(self, client, health_events):
         entities = []
-        client = local_session(self.manager.session_factory).client(
-            'health', region_name='us-east-1')
         for event_set in chunks(health_events, 10):
             event_map = {e['arn']: e for e in event_set}
             event_arns = list(event_map.keys())
@@ -94,3 +93,21 @@ class HealthEventFilter(Filter):
                             *[p['entities'] for p in paginator.paginate(
                                 filter={'eventArns': event_arns})])))
         return entities
+
+    @classmethod
+    def register_resources(klass, registry, resource_class):
+        """ meta model subscriber on resource registration.
+
+        We watch for PHD event that provides affected entities and register
+        the health-event filter to the resources.
+        """
+        services = {'acm-certificate', 'directconnect', 'dms-instance', 'directory', 'ec2',
+                    'dynamodb-table', 'cache-cluster', 'efs', 'app-elb', 'elb', 'emr', 'rds',
+                    'storage-gateway'}
+        # import pdb
+        # pdb.set_trace()
+        if resource_class.type in services:
+            resource_class.filter_registry.register('health-event', klass)
+
+
+resources.subscribe(resources.EVENT_REGISTER, HealthEventFilter.register_resources)
