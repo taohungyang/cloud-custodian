@@ -112,8 +112,6 @@ class HealthEventFilter(Filter):
         services = {'acm-certificate', 'directconnect', 'dms-instance', 'directory', 'ec2',
                     'dynamodb-table', 'cache-cluster', 'efs', 'app-elb', 'elb', 'emr', 'rds',
                     'storage-gateway'}
-        # import pdb
-        # pdb.set_trace()
         if resource_class.type in services:
             resource_class.filter_registry.register('health-event', klass)
 
